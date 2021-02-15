@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/aryann/db/storage"
 )
 
 type JSONStorage struct {
@@ -20,15 +22,15 @@ type document struct {
 
 type documents []document
 
-func (d documents) find(newDocument document) (index int, found bool) {
+func (d documents) find(key string) (index int, found bool) {
 	start := 0
 	limit := len(d)
 	for start < limit {
 		mid := start + (limit-start)/2
-		if d[mid].Key == newDocument.Key {
+		if d[mid].Key == key {
 			return mid, true
 		}
-		if d[mid].Key < newDocument.Key {
+		if d[mid].Key < key {
 			start = mid + 1
 		} else {
 			limit = mid - 1
@@ -36,7 +38,7 @@ func (d documents) find(newDocument document) (index int, found bool) {
 	}
 
 	if start < len(d) {
-		return start, d[start].Key == newDocument.Key
+		return start, d[start].Key == key
 	} else {
 		return start, false
 	}
@@ -77,32 +79,53 @@ func maybeInitFile(file *os.File) error {
 	return nil
 }
 
-func (j *JSONStorage) Insert(key string, payload string) error {
+func (j *JSONStorage) currentDocuments() (documents, error) {
 	if _, err := j.file.Seek(0, 0); err != nil {
-		return err
+		return nil, err
 	}
 	data, err := ioutil.ReadAll(j.file)
 	if err != nil {
-		return fmt.Errorf("could not read file: %v", err)
+		return nil, fmt.Errorf("could not read file: %v", err)
 	}
 	var current documents
 	if err := json.Unmarshal(data, &current); err != nil {
-		return fmt.Errorf("could not unmarshal JSON: %v", err)
+		return nil, fmt.Errorf("could not unmarshal JSON: %v", err)
+	}
+	return current, nil
+}
+
+func (j *JSONStorage) Lookup(key string) (version int64, payload string, err error) {
+	current, err := j.currentDocuments()
+	if err != nil {
+		return 0, "", err
+	}
+	i, found := current.find(key)
+	if !found {
+		return storage.VersionNotFound, "", nil
+	}
+	return current[i].Version, current[i].Payload, nil
+}
+
+func (j *JSONStorage) Write(key string, version int64, payload string) error {
+	current, err := j.currentDocuments()
+	if err != nil {
+		return err
 	}
 
 	newDocument := document{
 		Key:     key,
-		Version: 0,
+		Version: version,
 		Payload: payload,
 	}
 
-	insertAt, found := current.find(newDocument)
+	i, found := current.find(key)
 	if found {
-		return fmt.Errorf("document with key '%s' already exists", key)
+		current[i] = newDocument
+	} else {
+		current = append(append(current[:i], newDocument), current[i:]...)
 	}
 
-	newDocuments := append(append(current[:insertAt], newDocument), current[insertAt:]...)
-	marshaledDocuments, err := json.Marshal(newDocuments)
+	marshaledDocuments, err := json.Marshal(current)
 	if err != nil {
 		return fmt.Errorf("could not marshal documents: %v", err)
 	}
@@ -110,7 +133,7 @@ func (j *JSONStorage) Insert(key string, payload string) error {
 		return err
 	}
 
-	fmt.Println(newDocuments)
+	fmt.Println(current)
 	return nil
 }
 

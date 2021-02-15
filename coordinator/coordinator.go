@@ -1,6 +1,8 @@
 package coordinator
 
 import (
+	"fmt"
+
 	"github.com/aryann/db/storage"
 )
 
@@ -24,6 +26,14 @@ func (c *Coordinator) run(fn func() error) error {
 
 func (c *Coordinator) Insert(key string, payload string) error {
 	return c.run(func() error {
-		return c.storage.Insert(key, payload)
+		version, _, err := c.storage.Lookup(key)
+		if err != nil {
+			return err
+		}
+		if version != storage.VersionNotFound {
+			return fmt.Errorf("%s: already exists", key)
+		}
+
+		return c.storage.Write(key, 0, payload)
 	})
 }
