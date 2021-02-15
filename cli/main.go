@@ -25,7 +25,7 @@ func insert(ctx context.Context, client proto.DBClient, key string, payload stri
 	if err != nil {
 		log.Fatalf("Insert failed: %v", err)
 	}
-	log.Printf("Inserted %s at version %d.", response.GetVersion())
+	log.Printf("Inserted %s at version %d.", key, response.GetVersion())
 }
 
 func main() {
