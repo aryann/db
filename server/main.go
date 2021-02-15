@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	address = flag.String("address", ":8080", "The port used by the server.")
+	address = flag.String("address", ":8080", "The address used by the server.")
 )
 
 type dbServer struct {
