@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+option go_package = "github.com/aryann/db/proto";
+
+package db;
+
+service DB {
+  rpc Insert(InsertRequest) returns (InsertResponse) {}
+  rpc Update(UpdateRequest) returns (UpdateRequest) {}
+  rpc Delete(DeleteRequest) returns (EmptyMessage) {}
+  rpc Lookup(LookupRequest) returns (LookupResponse) {}
+  rpc Scan(ScanRequest) returns (stream ScanResponse) {}
+}
+
+message EmptyMessage {}
+
+message Document {
+    string key = 1;
+    string payload = 2;
+    int64 version = 3;
+}
+
+message InsertRequest {
+  Document document = 1;
+}
+
+message InsertResponse {
+    int64 version = 1;
+}
+
+message UpdateRequest {
+    Document document = 1;
+}
+
+message UpdateResponse {
+    int64 version = 1;
+}
+
+message DeleteRequest {
+    string key = 1;
+    int64 version = 2;
+}
+
+message LookupRequest {
+    string key = 1;
+}
+
+message LookupResponse {
+    Document document = 1;
+}
+
+message ScanRequest {
+    string prefix = 1;
+}
+
+message ScanResponse {
+    repeated Document documents = 1;
+}
