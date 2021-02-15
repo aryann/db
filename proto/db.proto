@@ -49,8 +49,16 @@ message LookupResponse {
     Document document = 1;
 }
 
+message KeyRange {
+    string start = 1;
+    string limit = 2;
+}
+
 message ScanRequest {
-    string prefix = 1;
+    oneof predicate {
+        string prefix = 1;
+        KeyRange keyRange = 2;
+    }
 }
 
 message ScanResponse {
